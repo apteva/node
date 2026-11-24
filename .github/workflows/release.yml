@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # build.sh names the tarball from package.json, so the tag must match.
+      - name: Check tag matches package.json
+        run: |
+          version=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' package.json)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "tag $GITHUB_REF_NAME does not match package.json version $version" >&2
+            exit 1
+          fi
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build:ui
+      - run: go test -count=1 -timeout=240s ./...
+
+      - name: Build Pi tarball
+        run: |
+          ./build.sh pi
+          cd dist && sha256sum apteva-node-*-linux-arm64.tar.gz > SHA256SUMS
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/apteva-node-*-linux-arm64.tar.gz
+            dist/SHA256SUMS
+          generate_release_notes: true
+          body: |
+            Apteva Node for Raspberry Pi (Raspberry Pi OS Bookworm, 64-bit).
+
+            ```sh
+            tar xzf apteva-node-*-linux-arm64.tar.gz
+            cd apteva-node-*-linux-arm64
+            sudo sh install.sh
+            ```
+
+            Then declare the device's hardware in `/etc/apteva-node/node.yaml` and pair it from the setup screen.
