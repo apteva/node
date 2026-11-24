@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Apteva Node</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="top-left">
+        <span class="node-name" id="node-name">node</span>
+        <span class="link-pill" id="link-pill"><i></i><span>connecting</span></span>
+      </div>
+      <div class="top-right">
+        <span class="clock" id="clock">--:--</span>
+        <button class="icon-btn" data-open="settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="screen" data-screen="presence">
+        <div class="presence">
+          <div class="mark-wrap"><div class="mark" id="orb" data-state="offline"></div></div>
+          <div class="presence-text">
+            <div class="agent-name" id="agent-name">No agent</div>
+            <div class="agent-state" id="agent-state">Waiting for link</div>
+            <div class="last-said" id="last-said"></div>
+          </div>
+        </div>
+        <div class="widgets" id="widgets"></div>
+      </section>
+
+      <section class="screen" data-screen="talk" hidden>
+        <div class="transcript" id="transcript"></div>
+        <div class="chips" id="chips"></div>
+        <form class="composer" id="composer" autocomplete="off">
+          <input id="composer-input" type="text" placeholder="Say something to your agent" enterkeyhint="send" data-osk>
+          <button type="submit" aria-label="Send">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+      </section>
+
+      <section class="screen" data-screen="agents" hidden>
+        <div class="agents-head"><span class="agents-title">Agents</span><span class="agents-sub" id="agents-sub"></span></div>
+        <label class="agents-project" id="agents-project-label" hidden>Project<select id="agents-project" aria-label="Project"></select></label>
+        <div class="agents-fit"><div class="agents-grid" id="agents-grid"></div></div>
+        <div class="agent-page" id="agent-page" hidden></div>
+      </section>
+
+      <section class="screen" data-screen="approvals" hidden>
+        <div class="approvals" id="approvals"></div>
+      </section>
+
+      <section class="screen" data-screen="hardware" hidden>
+        <div class="standalone-head" id="standalone-head">
+          <div class="big-clock" id="big-clock">--:--</div>
+          <div class="big-date" id="big-date"></div>
+          <div class="notice-card" id="notice" hidden><span id="notice-text"></span><button class="link-btn" data-dismiss-notice>Dismiss</button></div>
+          <button class="btn connect-btn" data-open="connect">Connect to Apteva</button>
+        </div>
+        <div class="tiles" id="tiles"></div>
+        <h2 class="section-title">Recent actions</h2>
+        <ol class="actions" id="actions"></ol>
+      </section>
+    </main>
+
+    <nav class="tabs" id="tabs">
+      <button data-tab="presence" class="active" aria-label="Presence">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="8.5" opacity=".45"/></svg>
+        <span>Presence</span>
+      </button>
+      <button data-tab="talk" aria-label="Talk">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
+        <span>Talk</span>
+      </button>
+      <button data-tab="agents" aria-label="Agents">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="12" height="12" rx="3.5"/><path d="M4 8.5v3.5M20 8.5v3.5M10 9v2.5M14 9v2.5M8 20h8"/></svg>
+        <span>Agents</span>
+      </button>
+      <button data-tab="approvals" aria-label="Approvals">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7.5 3v5.5c0 4.5-3.2 8.3-7.5 9.5-4.3-1.2-7.5-5-7.5-9.5V6L12 3z"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg>
+        <span>Approvals</span>
+        <b class="badge" id="approvals-badge" hidden>0</b>
+      </button>
+      <button data-tab="hardware" aria-label="Hardware">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21"/></svg>
+        <span>Hardware</span>
+      </button>
+    </nav>
+
+    <div class="sheet-backdrop app-sheet" id="app-sheet" hidden>
+      <form class="sheet" role="dialog" aria-modal="true" aria-labelledby="app-sheet-title" id="app-sheet-form" autocomplete="off">
+        <div class="sheet-kicker app-kicker" id="app-sheet-kicker"></div>
+        <div class="sheet-title" id="app-sheet-title"></div>
+        <div class="sheet-meta" id="app-sheet-message"></div>
+        <div class="fields" id="app-sheet-fields"></div>
+        <div class="sheet-actions">
+          <button type="button" class="btn" id="app-sheet-cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="app-sheet-ok">OK</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="overlay" id="settings" hidden></div>
+    <div class="overlay setup" id="setup" hidden></div>
+
+    <div class="osk" id="osk" hidden></div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <div class="sheet-backdrop sent" id="sent-photo" role="status" aria-live="polite" hidden>
+      <div class="sheet">
+        <div class="sheet-kicker">Photo sent</div>
+        <img class="sent-img" id="sent-photo-img" alt="">
+        <div class="sheet-meta" id="sent-photo-meta"></div>
+      </div>
+    </div>
+
+    <div class="sheet-backdrop" id="sheet" hidden>
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+        <div class="sheet-kicker">Your agent is asking</div>
+        <div class="sheet-title" id="sheet-title"></div>
+        <div class="sheet-meta" id="sheet-meta"></div>
+        <div class="countdown"><i id="sheet-countdown"></i></div>
+        <div class="sheet-actions" id="sheet-actions"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

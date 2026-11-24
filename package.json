@@ -1,0 +1,19 @@
+{
+  "name": "@apteva/node",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apteva Node: on-device daemon and UI that gives an Apteva agent a physical body",
+  "scripts": {
+    "build:ui": "bun run ui/build.ts",
+    "dev:ui": "bun run ui/build.ts --watch",
+    "typecheck": "tsc --noEmit -p ui"
+  },
+  "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "5.2.5",
+    "qrcode-generator": "1.4.4"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.11",
+    "typescript": "5.9.3"
+  }
+}

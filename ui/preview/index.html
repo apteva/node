@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Node Preview</title>
+<style>
+  /* Dashboard terminal theme: dark by default, its light palette on request. */
+  :root {
+    --bg: #0a0a0a; --panel: #141414; --line: #2a2a2a; --text: #e8e8e8; --muted: #aaaaaa; --accent: #f97316; --bad: #ef4444;
+    --input: #111111; color-scheme: dark;
+  }
+  :root[data-theme="light"] { --bg: #faf8f3; --panel: #f1ede4; --line: #d4ccb8; --text: #1a1a1a; --muted: #555555; --accent: #c2410c; --input: #f6f2e9; color-scheme: light; }
+  @font-face { font-family: "JetBrains Mono"; src: url("/jetbrains-mono.woff2") format("woff2"); font-weight: 100 800; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 13px/1.45 "JetBrains Mono", ui-monospace, Menlo, monospace; display: flex; overflow: hidden; }
+  .stage { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; position: relative; padding: 24px; }
+  .device { position: absolute; transform-origin: center center; }
+  .bezel { background: #050505; border-radius: 28px; padding: 22px; box-shadow: inset 0 0 0 1px #2a2a2a; }
+  .bezel.flat { border-radius: 10px; padding: 16px; }
+  iframe { display: block; border: 0; background: #0a0a0a; border-radius: 4px; }
+  aside { width: 300px; flex: none; background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+  h1 { font-size: 15px; margin: 0; }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+  select, input, button.b { font: inherit; color: inherit; background: var(--input); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; width: 100%; }
+  button.b { cursor: pointer; text-align: left; }
+  button.b:hover { border-color: var(--accent); color: var(--accent); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .state { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 13px; }
+  .state span { color: var(--muted); }
+  .state b { font-weight: 600; overflow-wrap: anywhere; }
+  .row { display: flex; gap: 6px; }
+  .note { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  a { color: var(--accent); }
+  .log { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); min-height: 16px; }
+  @media (max-width: 760px) { body { flex-direction: column; overflow: auto; } aside { width: auto; border-left: 0; border-top: 1px solid var(--line); } .stage { min-height: 70vh; } }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="device" id="device">
+    <div class="bezel" id="bezel">
+      <iframe id="screen" title="Device screen" src="about:blank"></iframe>
+    </div>
+  </div>
+</div>
+<aside>
+  <h1>Node preview</h1>
+  <section>
+    <h2>Device</h2>
+    <select id="preset"></select>
+    <div class="row" style="margin-top:6px">
+      <button class="b" id="rotate">Rotate</button>
+      <button class="b" id="reload">Reload screen</button>
+    </div>
+    <p class="note" id="dims"></p>
+  </section>
+  <section>
+    <h2>Session</h2>
+    <div class="grid">
+      <button class="b" data-dev="sign-in">Sign in</button>
+      <button class="b" data-dev="reset">First boot</button>
+    </div>
+    <p class="note">Sign in pairs with node-sim and approves it, skipping setup.</p>
+  </section>
+  <section>
+    <h2>State</h2>
+    <div class="state" id="state"><span>Daemon</span><b>connecting…</b></div>
+  </section>
+  <section>
+    <h2>Apteva (node-sim)</h2>
+    <div class="grid">
+      <button class="b" data-sim="approve">Approve pairing</button>
+      <button class="b" data-sim="deny">Deny pairing</button>
+      <button class="b" data-sim="kick">Drop link</button>
+      <button class="b" data-sim="revoke">Remove device</button>
+    </div>
+    <p class="note">Or approve like a person would: <a href="http://127.0.0.1:7490/pair" target="_blank" rel="noopener">pairing page</a>.</p>
+  </section>
+  <section>
+    <h2>Agent</h2>
+    <form class="row" id="say-form"><input id="say" placeholder="Make the agent say…"><button class="b" style="width:auto">Say</button></form>
+    <div class="grid" style="margin-top:6px">
+      <button class="b" data-sim="status thinking">Thinking</button>
+      <button class="b" data-sim="status idle">Idle</button>
+      <button class="b" data-sim='call eye_capture'>Ask for photo</button>
+      <button class="b" data-sim='call door_set {"on":true}'>Ask to open door</button>
+      <button class="b" data-sim='call lamp_set {"on":true}'>Lamp on</button>
+      <button class="b" data-sim="tick">App update</button>
+    </div>
+    <p class="note">The door needs Allow pressed and held on the screen.</p>
+  </section>
+  <div class="log" id="log"></div>
+</aside>
+<script>
+const NODE = "127.0.0.1:7480", SIM = "http://127.0.0.1:7490";
+// CSS pixels of the panel as the kiosk browser sees it.
+const presets = [
+  { id: "td2", name: "Pi Touch Display 2 — 7\" 720×1280", w: 720, h: 1280 },
+  { id: "hp4", name: "HyperPixel 4.0 — 4\" 480×800", w: 480, h: 800 },
+  { id: "hp4sq", name: "HyperPixel 4.0 Square — 720×720", w: 720, h: 720, flat: true },
+  { id: "td1", name: "Pi Touch Display — 7\" 800×480", w: 800, h: 480, landscape: true, flat: true },
+  { id: "ws35", name: "Waveshare 3.5\" — 480×320", w: 480, h: 320, landscape: true, flat: true },
+  { id: "hand", name: "Handheld 5.5\" — 1080×1920 @2x", w: 540, h: 960 },
+];
+const $ = (id) => document.getElementById(id);
+let cur = presets[0], rotated = false;
+try { const s = JSON.parse(localStorage.getItem("node-preview") || "{}"); cur = presets.find((p) => p.id === s.id) || cur; rotated = !!s.rotated; } catch {}
+
+$("preset").innerHTML = presets.map((p) => `<option value="${p.id}">${p.name}</option>`).join("");
+$("preset").value = cur.id;
+
+function layout() {
+  const w = rotated ? cur.h : cur.w, h = rotated ? cur.w : cur.h;
+  const f = $("screen");
+  f.style.width = w + "px"; f.style.height = h + "px";
+  $("bezel").classList.toggle("flat", !!cur.flat);
+  const dev = $("device"), stage = $("stage");
+  dev.style.transform = "none";
+  const s = Math.min(1, (stage.clientWidth - 48) / dev.offsetWidth, (stage.clientHeight - 48) / dev.offsetHeight);
+  dev.style.transform = `scale(${s})`;
+  dev.style.left = (stage.clientWidth - dev.offsetWidth) / 2 + "px";
+  dev.style.top = (stage.clientHeight - dev.offsetHeight) / 2 + "px";
+  $("dims").textContent = `${w}×${h} CSS px, shown at ${Math.round(s * 100)}%`;
+  try { localStorage.setItem("node-preview", JSON.stringify({ id: cur.id, rotated })); } catch {}
+}
+$("preset").onchange = () => { cur = presets.find((p) => p.id === $("preset").value); rotated = false; layout(); };
+$("rotate").onclick = () => { rotated = !rotated; layout(); };
+$("reload").onclick = () => { $("screen").src = `http://${NODE}/?t=${Date.now()}`; };
+addEventListener("resize", layout);
+$("screen").src = `http://${NODE}/`;
+layout();
+
+function log(t) { $("log").textContent = t; }
+async function sim(cmd) {
+  try { await fetch(SIM + "/sim", { method: "POST", mode: "no-cors", body: cmd }); log("→ " + cmd); }
+  catch { log("node-sim isn't running on " + SIM); }
+}
+document.querySelectorAll("[data-sim]").forEach((b) => (b.onclick = () => sim(b.dataset.sim)));
+document.querySelectorAll("[data-dev]").forEach((b) => (b.onclick = async () => {
+  log("…");
+  try { const r = await (await fetch("/dev/" + b.dataset.dev, { method: "POST" })).json(); log(r.message); }
+  catch { log("preview server unreachable"); }
+}));
+$("say-form").onsubmit = (e) => { e.preventDefault(); if ($("say").value.trim()) sim("say " + $("say").value.trim()); $("say").value = ""; };
+
+// The state readout uses the daemon's own socket.
+let ws;
+function connect() {
+  ws = new WebSocket(`ws://${NODE}/ws`);
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type !== "snapshot") return;
+    const s = m.data, p = s.setup.pairing;
+    const rows = [
+      ["Mode", s.setup.mode], ["Link", s.link.state + (s.queued ? ` · ${s.queued} queued` : "")],
+      ["Agent", s.agent.name || s.setup.agent || "—"], ["Server", s.setup.server_url || "—"],
+      ["Network", s.setup.network.wifi_ssid || (s.setup.network.online ? "online" : "offline")],
+      ["PIN", s.setup.pin_set ? "set" : "none"],
+    ];
+    if (p.status !== "idle") rows.push(["Pairing", p.status + (p.code ? " · " + p.code : "")]);
+    $("state").innerHTML = rows.map(([k, v]) => `<span>${k}</span><b>${String(v).replace(/</g, "&lt;")}</b>`).join("");
+  };
+  ws.onclose = () => { $("state").innerHTML = `<span>Daemon</span><b>not running on ${NODE}</b>`; setTimeout(connect, 1500); };
+}
+connect();
+</script>
+</body>
+</html>

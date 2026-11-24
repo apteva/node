@@ -1,0 +1,55 @@
+# node.dev.yaml — local development: the example device, unpaired.
+# Anything not declared here does not exist for the agent.
+
+name: desk
+
+# No server here: the device starts in first-boot setup and pairs through
+# node-sim (http://127.0.0.1:7490/pair). State lives in .dev-state/.
+state_dir: .dev-state
+
+ui:
+  listen: 127.0.0.1:7480
+
+hardware:
+  gpio_chip: auto   # or /dev/gpiochip0
+  i2c_bus: 1
+
+safety:
+  safe_state_after: 30s   # link down this long → outputs go to safe_state
+  confirm_timeout: 30s    # unanswered approvals are denied
+
+capabilities:
+  - id: lamp
+    kind: relay
+    pin: 17
+    description: the desk lamp
+    safe_state: off
+
+  - id: door
+    kind: relay
+    pin: 27
+    description: the door strike
+    confirm: hold     # Allow must be pressed and held on screen
+    safe_state: off
+
+  - id: status_led
+    kind: led
+    pin: 5
+    description: the status LED
+
+  - id: climate
+    kind: i2c_sensor
+    driver: bme280
+    address: 0x76
+    poll: 15s
+    description: the room climate sensor
+    events:
+      - field: temperature_c
+        above: 28
+
+  - id: eye
+    kind: camera
+    width: 1280
+    height: 720
+    description: the front camera
+    confirm: screen   # tap Allow on the device

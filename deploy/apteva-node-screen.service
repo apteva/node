@@ -1,0 +1,21 @@
+[Unit]
+Description=Apteva Node screen (cog kiosk)
+After=apteva-node.service systemd-user-sessions.service
+Wants=apteva-node.service
+
+[Service]
+Type=simple
+User=apteva-node
+SupplementaryGroups=video render input
+PAMName=login
+TTYPath=/dev/tty1
+# cog (WPE WebKit) draws straight to the display through DRM; no desktop needed.
+Environment=COG_PLATFORM_NAME=drm
+Environment=WPE_BCMRPI_TOUCH=1
+ExecStartPre=/bin/sh -c 'until wget -qO- http://127.0.0.1:7480/api/snapshot >/dev/null; do sleep 1; done'
+ExecStart=/usr/bin/cog --platform=drm http://127.0.0.1:7480/
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target

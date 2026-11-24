@@ -1,0 +1,27 @@
+name: Test
+on:
+  push:
+    branches: ['main']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: bun install --frozen-lockfile
+      # The daemon embeds ui/dist, so build the UI before any Go step.
+      - run: bun run build:ui
+      - run: bun run typecheck
+      - run: bun test ui
+      - run: go vet ./...
+      - run: go test -count=1 -timeout=240s ./...
+      - run: CGO_ENABLED=1 go test -race -count=1 -timeout=240s ./internal/node/ ./internal/hw/
+      - run: GOOS=linux GOARCH=arm64 go build -o /tmp/apteva-node-arm64 ./cmd/apteva-node

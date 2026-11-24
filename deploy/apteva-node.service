@@ -1,0 +1,25 @@
+[Unit]
+Description=Apteva Node daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=apteva-node
+Group=apteva-node
+# gpio + i2c + video give access to /dev/gpiochip*, /dev/i2c-*, the camera.
+SupplementaryGroups=gpio i2c video
+ExecStart=/usr/local/bin/apteva-node --config /etc/apteva-node/node.yaml
+Restart=always
+RestartSec=2
+
+# The daemon only needs its devices, its config and its token.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+StateDirectory=apteva-node
+ReadOnlyPaths=/etc/apteva-node
+
+[Install]
+WantedBy=multi-user.target

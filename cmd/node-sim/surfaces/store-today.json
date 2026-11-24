@@ -1,0 +1,74 @@
+{
+  "schema": "apteva-native-surface/v1",
+  "id": "store-today",
+  "version": "1.0.0",
+  "title": "Store today",
+  "description": "Sales, goal and store status",
+  "icon": "shopping-bag",
+  "context": {"scope": "project"},
+  "presentation": "widget",
+  "data_sources": {
+    "today": {
+      "request": {"method": "GET", "path": "/device/today"},
+      "response": {"item": "$"}
+    }
+  },
+  "actions": {
+    "toggle_store": {
+      "type": "confirm",
+      "label": "Pause store",
+      "icon": "pause",
+      "request": {"method": "POST", "path": "/device/store/toggle"},
+      "confirmation": {
+        "title": "Pause the store?",
+        "message": "Visitors can browse but can't check out until you resume.",
+        "confirm_label": "Pause"
+      },
+      "success": {"refresh": ["today"], "toast": "Store updated"}
+    },
+    "add_note": {
+      "type": "form",
+      "label": "Note for the team",
+      "icon": "edit",
+      "request": {"method": "POST", "path": "/device/notes", "body": {"text": "{input.text}", "urgent": "$input.urgent"}},
+      "fields": [
+        {"name": "text", "type": "string", "label": "Note", "placeholder": "Out of oat milk", "required": true},
+        {"name": "urgent", "type": "boolean", "label": "Urgent", "default": false}
+      ],
+      "success": {"refresh": ["today"], "toast": "Note sent"}
+    }
+  },
+  "blocks": [
+    {"id": "status", "type": "status", "label": "Store", "source": "today", "value": "$.store_status"},
+    {"id": "sales", "type": "metric", "label": "Sales", "source": "today", "value": "$.sales", "format": "currency", "icon": "trending-up"},
+    {
+      "id": "numbers",
+      "type": "metrics",
+      "source": "today",
+      "metrics": [
+        {"label": "Orders", "value": "$.orders", "format": "number"},
+        {"label": "Visitors", "value": "$.visitors", "format": "number"}
+      ]
+    },
+    {"id": "goal", "type": "progress", "label": "Daily goal", "source": "today", "value": "$.goal_progress"},
+    {"id": "divider", "type": "divider"},
+    {"id": "headline", "type": "text", "source": "today", "value": "$.headline"},
+    {
+      "id": "notes",
+      "type": "list",
+      "title": "Notes",
+      "source": "today",
+      "items": "$.notes",
+      "limit": 3,
+      "item": {
+        "id": "{item.id}",
+        "title": "{item.text}",
+        "subtitle": [{"value": "{item.created_at}", "format": "relative_time"}],
+        "badge": {"value": "{item.tag}"}
+      },
+      "empty": {"title": "No notes yet", "icon": "inbox"}
+    },
+    {"id": "pause", "type": "action", "action": "toggle_store"},
+    {"id": "note", "type": "action", "action": "add_note"}
+  ]
+}
